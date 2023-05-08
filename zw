@@ -1,0 +1,27 @@
+python
+class PotatoMine(Plant):  # 土豆地雷
+    """土豆地雷植物"""
+    def __init__(self):
+        super().__init__(image_path="potato_mine.png")
+        self.name = "Potato Mine"
+        self.sun_cost = 25
+        self.health = 5
+        self.attack_damage = 0 
+        self.ready = False
+        
+    def check_if_ready(self):
+        # 准备就绪后,可以攻击僵尸
+        if not self.ready and self.age >= 2:  
+            self.ready = True   
+            
+    def attack(self, zombies):
+        # 攻击僵尸
+        if self.ready:
+            for zombie in zombies:
+                # 爆炸范围内的僵尸会受到攻击
+                if self.rect.colliderect(zombie.rect):  
+                    zombie.health -= self.attack_damage  
+                    zombie.slow_down()  # 使僵尸减速
+            # 土豆地雷消失  
+            self.kill() 
+            self.Is_life = False  
