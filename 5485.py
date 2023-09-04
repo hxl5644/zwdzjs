@@ -1,79 +1,276 @@
 python
-# 僵尸王类
-class ZombieKing(Zombie): 
+import pygame
+from pygame.locals import *
+import random
+
+# 常量定义
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# 游戏类
+class Game:
     def __init__(self):
-        super().__init__()
-        self.image = pygame.image.load("zombie_king.png")
-        self.rect = self.image.get_rect()
-        self.hp = 10
-        self.speed = 1
-    
-    def move(self):
-        super().move() 
-        # 每10帧召唤一只普通僵尸
-        if pygame.time.get_ticks() % 10 == 0: 
-            zombies.add(Zombie())
-            
-# 僵尸球类          
-class ZombieBall(Zombie):
-    def __init__(self):
-        super().__init__()
-        self.image = pygame.image.load("zombie_ball.png")
-        self.rect = self.image.get_rect()
-        self.hp = 3
-        self.speed = 3
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT)) 
+        pygame.display.set_caption('植物大战僵尸')  
+
+        # 加载资源
+        self.load_resources()
+
+        # 创建精灵组
+        self.plants = pygame.sprite.Group()
+        self.zombies = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
+
+        # 游戏参数
+        self.sunlight = 100
+        self.selected_plant = None
+        self.wave = 1
+
+    def load_resources(self):
+        # 加载植物资源
+        self.plant_sprites = {
+            'peashooter': pygame.image.load('peashooter.png')
+        }
         
-    def move(self):
-        super().move()
-        # 每3秒改变移动方向
-        if pygame.time.get_ticks() % 3000 == 0:
-            self.speed = -self.speed  
+        # 加载僵尸资源
+        self.zombie_sprites = {
+            'normal': pygame.image.load('zombie.png')
+        }
+        
+        # 加载背景资源
+        self.bg_image = pygame.image.load('bg.jpg')
+
+    def run(self):
+        clock = pygame.time.Clock()
+        running = True
+        
+        while running:
+            # 限制帧率
+            clock.tick(30)
             
-# 在游戏循环中根据时间新增僵尸         
-zombie_timer = pygame.time.Clock()
-zombie_timer.tick(1)  
+            # 事件循环
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    running = False
+                    
+                if event.type == MOUSEBUTTONDOWN:
+                    # 种植植物
+                    if self.selected_plant:
+                        plant = Plant(self.selected_plant, mouse_x, mouse_y)  
+                        self.plants.add(plant)
+                        self.sunlight -= plant.sunlight_cost
+            
+            # 更新游戏
+            self.update()
+            
+            # 绘制游戏
+            self.draw()
+            
+            pygame.display.update()
 
-if total_time > 20 and total_time % 10 == 0:
-    zombies.add(ZombieKing())
-if total_time > 10 and total_time % 5 == 0: 
-    zombies.add(ZombieBall()) 
-else:
-    zombies.add(Zombie()) 
-    
-# 活动:僵尸关卡,全部清除僵尸才算通关
-if level.is_zombie_level: 
-    if len(zombies) == 0:
-        show_message("关卡通关!")
-        now_time = get_game_time()  # 获取当前游戏时间
-        if now_time < best_time:  # 如果更快通关,更新最佳记录
-            best_time = now_time
-            save_player_data()  # 保存玩家数据
-        go_next_level()  # 进入下一关
+        pygame.quit()
 
-# 活动:加倍收获阳光活动  
-double_sunshine_duration = 120  # 活动持续时间
-double_sunshine_start = 0
-if event.is_double_sunshine and now - double_sunshine_start < double_sunshine_duration:
-    sunshine_value = sunshine_value * 2  # 阳光产出加倍
-else:
-    double_sunshine_start = now  # 更新活动启动时间
+    def update(self):
+        # 生成僵尸
+        if random.random() < 0.1:
+            zombie = Zombie(self.zombie_sprites['normal'], 800, random.randint(0, 600))
+            self.zombies.add(zombie)
+            
+        # 碰撞检测
+        hits = pygame.sprite.groupcollide(self.zombies, self.bullets, False, True)
+        for zombie in hits:
+            zombie.hit()
+            
+        # 更新植物、僵尸、子弹
+        self.plants.update()
+        self.zombies.update()
+        self.bullets.update()
 
-# 活动:僵尸关卡限时通关 
-if level.is_zombie_level:
-    finish_time = get_level_time() + 180  # 3分钟内通关
-    if now_time >= finish_time:
-        show_message("限时未通关, GAME OVER!")
-        # 游戏结束,所有植物清除
-        for plant in plants: 
-            plant.kill() 
-else:
-    finish_time = 0  # 活动时间重置        
+    def draw(self):
+        # 绘制背景
+        self.screen.blit(self.bg_image, (0,0))
+        
+        # 绘制阳光
+        draw_text(self.screen, 'Sunlight: %d' % self.sunlight, 24, (10, 10))
+        
+        # 绘制植物和僵尸
+        self.plants.draw(self.screen)
+        self.zombies.draw(self.screen)
+        
+if __name__ == '__main__':
+    game = Game()
+    game.run()
+    python
+# 导入模块
+import pygame
+from pygame.locals import *
 
-# 活动:随机奖励,概率获得额外阳光或金币  
-if random.random() < 0.2:  # 20%概率触发奖励
-    gift = random.choice(["sunshine", "money"])
-    if gift == "sunshine":
-        sunshine_value += 50  # 额外50点阳光
-    else:
-        coins += 50  # 额外50金币
-    show_message(f"恭喜你,获得{gift}奖励!")
+# 游戏类
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((800,600))
+        pygame.display.set_caption('植物大战僵尸')
+
+        # 加载资源
+        self.load_resources()
+
+        # 创建精灵组
+        self.plants = pygame.sprite.Group() 
+        self.zombies = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
+
+        # 游戏参数
+        self.sunlight = 50
+        self.selected_plant = None
+
+    def load_resources(self):
+        # 加载植物和僵尸资源
+        pass
+
+    def run(self):
+        clock = pygame.time.Clock()
+        running = True
+
+        while running:
+            clock.tick(30)
+            
+            # 处理事件
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    running = False
+
+            # 更新游戏
+            self.update()
+
+            # 绘制游戏
+            self.draw()
+
+            pygame.display.update()
+
+        pygame.quit()
+
+    def update(self):
+        # 生成僵尸
+        pass
+
+        # 子弹碰撞检测
+        pass
+
+        # 更新植物、僵尸、子弹
+        self.plants.update()
+        self.zombies.update() 
+        self.bullets.update()
+
+    def draw(self):
+        self.screen.fill((255,255,255))
+        self.plants.draw(self.screen)
+        self.zombies.draw(self.screen)
+        self.bullets.draw(self.screen)
+        
+if __name__ == '__main__':
+    game = Game() 
+    game.run()
+
+后续可以继续扩展:1. 实现阳光系统,种植植物需要花费阳光2. 加载并绘制背景图片和地图3. 用户交互,选择植物,鼠标拖放种植4. 更多植物和僵尸类型,不同能力5. 实现波次系统,控制僵尸生成6. 增加音效和UI界面7. 保存和读取游戏进度以及更多丰富的游戏玩法内容。 （已编辑） 
+  晚上 10:35
+继续
+应用  晚上 10:35
+好的,让我继续扩展植物大战僵尸的代码:
+
+python
+import pygame
+from pygame.locals import *
+
+# 常量定义
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# 游戏类
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption('植物大战僵尸')
+        
+        # 加载资源
+        self.load_resources()
+        
+        # 创建精灵组
+        self.plants = pygame.sprite.Group()
+        self.zombies = pygame.sprite.Group()
+        
+        # 游戏参数
+        self.sunlight = 100
+        self.selected_plant = None
+        
+    def load_resources(self):
+        # 加载植物图像
+        self.plant_sprites = {
+            'peashooter': pygame.image.load('peashooter.png') 
+        }
+        
+        # 加载僵尸图像
+        self.zombie_sprites = {
+            'normal': pygame.image.load('zombie.png')
+        }
+        
+        # 加载背景图像
+        self.bg_image = pygame.image.load('bg.jpg')
+        
+    def run(self):
+        clock = pygame.time.Clock()
+        running = True
+        
+        while running:
+            # 限制帧率
+            clock.tick(30)
+            
+            # 事件循环
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    running = False
+                    
+                if event.type == MOUSEBUTTONDOWN:
+                    # 处理点击事件,种植植物
+                    if self.selected_plant:
+                        plant = Plant(self.selected_plant, mouse_x, mouse_y)
+                        self.plants.add(plant)
+                        self.sunlight -= plant.sunlight_cost
+                        
+            # 更新游戏
+            self.update()
+            
+            # 绘制游戏
+            self.draw()
+            
+            pygame.display.update()
+            
+        pygame.quit()
+        
+    def update(self):
+        # 生成僵尸逻辑
+        pass
+        
+        # 碰撞检测逻辑
+        pass
+        
+        # 更新植物和僵尸组
+        self.plants.update()
+        self.zombies.update()
+        
+    def draw(self):
+        # 绘制背景
+        self.screen.blit(self.bg_image, (0,0))
+        
+        # 绘制阳光
+        draw_text(self.screen, 'Sunlight: %d' % self.sunlight, 24, (10, 10))
+        
+        # 绘制植物和僵尸
+        self.plants.draw(self.screen)
+        self.zombies.draw(self.screen)
+        
+if __name__ == '__main__':
+    game = Game()
+    game.run()
